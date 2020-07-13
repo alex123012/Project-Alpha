@@ -1,5 +1,8 @@
 #! /home/alexmakh/anaconda3/bin/python3
-# Импорт библиотек
+
+#####################
+# importing modules #
+#####################
 import argparse
 import re
 import PyPDF2 as pd
@@ -12,36 +15,32 @@ from pdfminer.layout import LAParams
 from pdfminer.pdfpage import PDFPage
 
 try:
-    def lox(pdf):
-        p = "Number of pages in file - " + str(pd.PdfFileReader(
-            open(pdf, mode='rb'),  # В переменную записывается исходнозаданная
-            strict=False).getNumPages())  # строка и количество страниц
-        print(p)
-
-    # Задание функции, которая будет находить регулярные выражения
+    ##################
+    # RE finder func #
+    ##################
     def rebmf(pdf, page=None):
-        red = input('Enter RE: ')  # Ввод регулярного выражения (далее - РВ)
-        text = ""               # Переменная для цикла "Вывод функции"
+        red = input('Enter RE: ')  # Entering RE
+        text = ""
         file = pd.PdfFileReader(open(pdf, mode='rb'),
-                                strict=False)  # Загрузка-чтение pdf-файла
-        red = ".*" + red + ".*"
+                                strict=False)  # Reading PDF file
+        red = ".*" + red + ".*"  # string for RE find all line
         refinder = []
-        for i in range(file.getNumPages()):
-            text = file.getPage(i).extractText()
-            refinder += re.findall(red, text)  # Поиск соответствий
-            # Получение текста i-той страницы (в PyPDF2 отсутствует возможность
-            # выделить весь текст файла сразу), поэтому
-            # просто зацикливаем выделение по страницам
-        # Делаем так для того, чтобы на выходе получать целую строку с РВ
-        for i in range(len(refinder)):
+
+        for i in range(file.getNumPages()):  # Obtaining i page of file
+            text = file.getPage(i).extractText()  # Extracting text from page
+            refinder.append(re.findall(red, text))  # RE finding
+        for i in range(len(refinder)):  # Printing all lines fith RE
             print(refinder[i], '\n')
-        if page is True:
+
+        if page is True:  # Printing page amount
             print(
                 "Number of pages in file - " + str(file.getNumPages()))
 
-    # converts pdf, returns its text content as a string
+    ######################################################
+    # converts pdf, returns its text content as a string #
+    ######################################################
     def conv(fname, pages=None):
-        if not pages:
+        if pages is None:
             pagenums = set()
         else:
             pagenums = set(pages)
@@ -60,9 +59,12 @@ try:
         output.close
         return text
 
-    def save_pdf(pdf, redactor=None):
+    ##########################################
+    # Saving PDF text to another format file #
+    ##########################################
+    def save_pdf(pdf, redactor=None, page=None):
         print('extracting text...')
-        text = conv(pdf)  # get string of text content of pdf
+        text = conv(pdf, page)  # get string of text content of pdf
         kur = input('''Do you want to save your PDF file text to txt, word or other type of file?
 if you don't want to continue, type any key, execept 'w', 't' and 'o': [w/t/o] ''').lower()
         perev = {'w': 'docx', 'word': 'docx', 't': 'txt', 'txt': 'txt'}
@@ -73,8 +75,8 @@ if you don't want to continue, type any key, execept 'w', 't' and 'o': [w/t/o] '
                 textFilename = textFilename + '.' + perev[kur]
             textFile = open(textFilename, "w")  # make text file
             textFile.write(text)  # write text to text file
+            print('successfully converted to', textFilename)
 
-            print('\nsuccessfully converted ', end='')
         elif kur == 'o' or kur == 'other':
             textFilename = input(
                 'enter your destination (with filename and file type (.***)): '
@@ -82,19 +84,16 @@ if you don't want to continue, type any key, execept 'w', 't' and 'o': [w/t/o] '
 
             textFile = open(textFilename, "w")  # make text file
             textFile.write(text)  # write text to text file
+            print('successfully converted to', textFilename)
 
-            print('\nsuccessfully converted ', end='')
         else:
             print('thank you for using!')
         if redactor is not None:
-            subprocess.call([redactor, textFilename])
-            print('and edited ', end='')
-        print(textFilename)
-
-    # Задание еще одной функции (чисто для интереса), которая будет выводить
-    # количество страниц в открываемом pdf-файле
-
-    # Тепрь создаем интерфейс консоли с помощью argparce
+            subprocess.run([redactor, textFilename])
+            print('edited', textFilename)
+    ################
+    # Argparce CLI #
+    ################
     parser = argparse.ArgumentParser(
         prog=''''BETA' PDF-worker''',
         epilog='Thanks for using this program!',
@@ -111,7 +110,7 @@ if you don't want to continue, type any key, execept 'w', 't' and 'o': [w/t/o] '
                                     help='convert and/or edit text from PDF')
     convert.add_argument('-r', '--redactor', action='store', dest='enter',
                          help='type text editor name')
-    convert.add_argument('-p', '--pages', action='store', dest='Enter',
+    convert.add_argument('-p', '--pages', action='store', dest='page',
                          help='type page number to convert/edit')
     convert.set_defaults(func=save_pdf)
 
@@ -124,14 +123,15 @@ if you don't want to continue, type any key, execept 'w', 't' and 'o': [w/t/o] '
         'pdf', metavar='PDF', type=str,  # Теперь задаем аргументы
         help='PDF-File for opening')
 
-    # А также свойства аргументов: имя опционального и позиционного аргументов,
-    # справка, а также значение(какая из функций активируется) для опцион.
-    # аргумента по умолчанию и по вызову, тип данных для позиционного аргумента
-
-    args = parser.parse_args()  # Команда для записи того, что ввели с консоли
-    # if 'subprocess' in str(args.func):
-    args.func(args.pdf, args.enter)
-
+    args = parser.parse_args()  # Parsing args
+    # Running functions
+    if args.page is not None:
+        args.func(args.pdf, args.enter, args.page)
+    else:
+        args.func(args.pdf, args.enter)
+######################
+# Analyze exceptions #
+######################
 except KeyboardInterrupt:
     print('\nThank you for using!')
 except FileNotFoundError:
@@ -140,10 +140,6 @@ except pd.utils.PdfReadError:
     print('Not a PDF file')
 except pdfminer.pdfparser.PDFSyntaxError:
     print('Not a PDF file')
-except UnboundLocalError:
-    print()
-# except TypeError:
-#     print('Type at least one optional argument')
 except Exception:
     print('''Something went wrong... Please, contact developer:
 e-mail: makhonin.a.ru@gmail.com''')
